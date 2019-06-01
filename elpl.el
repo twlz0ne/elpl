@@ -41,7 +41,8 @@
   (concat invocation-directory invocation-name)
   "Path to the program used by `elpl'")
 
-(defvar elpl-cli-arguments
+(defun elpl-cli-arguments ()
+  "Commandline arguments to pass to `elpl-cli'"
   `("--batch"
     "--eval"
     ,(format "%S" '(let ((s ""))
@@ -56,11 +57,10 @@
                              (unless (string= s "\n")
                                (print (eval (read s))))
                              (setq s ""))
-                         (end-of-file)
                          (error
-                          (setq s "")
-                          (print err)))))))
-  "Commandline arguments to pass to `elpl-cli'")
+                          (cond ((string= "(end-of-file)" (format "%S" err)) nil)
+                                ((string-prefix-p "(void-variable " (format "%S" err)) (setq s ""))
+                                (t (print err))))))))))
 
 (defvar elpl-mode-map
   (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
@@ -94,7 +94,7 @@
     ;; create the comint process if there is no buffer.
     (unless buffer
       (apply 'make-comint-in-buffer "elpl" buffer
-             elpl-program nil elpl-cli-arguments)
+             elpl-program nil (elpl-cli-arguments))
       (elpl-mode))))
 
 (defun elpl--initialize ()
