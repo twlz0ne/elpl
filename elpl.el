@@ -53,7 +53,8 @@
                                                )))
                        (condition-case err
                            (progn
-                             (print (eval (read s)))
+                             (unless (string= s "\n")
+                               (print (eval (read s))))
                              (setq s ""))
                          (end-of-file)
                          (error
