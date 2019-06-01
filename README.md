@@ -1,6 +1,6 @@
 ## elpl
 
-Provides a nice interface to evaluating Emacs Lisp expressions but without contaminating current Emacs.
+Provides a simple interface to evaluating Emacs Lisp expressions but without contaminating current Emacs.
 
 ## Installation
 
@@ -21,7 +21,7 @@ M-x elpl
   <img src="/screenshot.png" />
 </p>
 
-## Credit
+## Credits
 
 - https://emacs-china.org/t/batch-read/9471/8 (@xuchunyang)
 - https://www.masteringemacs.org/article/comint-writing-command-interpreter 
