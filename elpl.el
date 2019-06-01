@@ -59,8 +59,8 @@
                              (setq s ""))
                          (error
                           (unless (string= "(end-of-file)" (format "%S" err))
-                            (t (setq s "")
-                               (print err))))))))))
+                            (setq s "")
+                            (print err)))))))))
 
 (defvar elpl-mode-map
   (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
