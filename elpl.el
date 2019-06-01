@@ -71,6 +71,14 @@
 (defvar elpl-prompt-regexp "^\\(?:\\[[^@]+@[^@]+\\]\\)"
   "Prompt for `elpl'.")
 
+(defun elpl-clean ()
+  "Clean the elpl buffer."
+  (interactive)
+  (when (eq major-mode 'elpl-mode)
+    (let ((comint-buffer-maximum-size 0))
+      (comint-truncate-buffer)
+      )))
+
 (defun elpl ()
   "Run an inferior instance of `elpl-cli' inside Emacs."
   (interactive)
