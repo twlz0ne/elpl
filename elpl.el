@@ -58,9 +58,9 @@
                                (print (eval (read s))))
                              (setq s ""))
                          (error
-                          (cond ((string= "(end-of-file)" (format "%S" err)) nil)
-                                ((string-prefix-p "(void-variable " (format "%S" err)) (setq s ""))
-                                (t (print err))))))))))
+                          (unless (string= "(end-of-file)" (format "%S" err))
+                            (t (setq s "")
+                               (print err))))))))))
 
 (defvar elpl-mode-map
   (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
