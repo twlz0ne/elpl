@@ -35,6 +35,8 @@
 
 ;;; Code:
 
+(require 'comint)
+
 (defvar elpl-cli-file-path
   (concat invocation-directory invocation-name)
   "Path to the program used by `elpl'")
