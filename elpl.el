@@ -65,11 +65,27 @@
 (defvar elpl-mode-map
   (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
     (define-key map "\t" 'completion-at-point)
+    (define-key map (kbd "RET") 'elpl-return)
     map)
   "Basic mode map for `elpl'")
 
 (defvar elpl-prompt-regexp "^\\(?:\\[[^@]+@[^@]+\\]\\)"
   "Prompt for `elpl'.")
+
+(defun elpl-pm nil
+  ;; Return the process mark of the current buffer.
+  (process-mark (get-buffer-process (current-buffer))))
+
+(defun elpl-return ()
+  (interactive)
+  (let ((state
+             (save-excursion
+               (end-of-line)
+               (parse-partial-sexp (elpl-pm)
+                                   (point)))))
+        (if (and (< (car state) 1) (not (nth 3 state)))
+            (comint-send-input)
+          (newline-and-indent))))
 
 (defun elpl-clean ()
   "Clean the elpl buffer."
