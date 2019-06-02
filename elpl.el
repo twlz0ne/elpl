@@ -66,6 +66,7 @@
   (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
     (define-key map "\t" 'completion-at-point)
     (define-key map (kbd "RET") 'elpl-return)
+    (define-key map (kbd "C-c l") 'elpl-clean)
     map)
   "Basic mode map for `elpl'")
 
