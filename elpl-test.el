@@ -31,7 +31,7 @@
     (insert "1")
     (comint-send-input)))
 
-;;;
+;;; expression
 
 (ert-deftest elpl-test-empty ()
   (should (equal
@@ -71,7 +71,86 @@ ELPL> "
              (call-interactively 'elpl)
              (with-current-buffer "*elpl*"
                (elpl-clean)
-               (insert "(+ 1 2 3)") (comint-send-input)
+               (insert "(+ 1 2 3)")
+               (comint-send-input)
+               (buffer-substring-no-properties (point-min)
+                                               (point-max)))))))
+
+;;; defvar/defun, undefined variable/function
+
+(ert-deftest elpl-test-defvar ()
+  (should (equal
+           "ELPL> (defvar foo \"bar\")
+
+foo
+ELPL> foo
+
+\"bar\"
+ELPL> "
+           (progn
+             (call-interactively 'elpl)
+             (with-current-buffer "*elpl*"
+               (elpl-clean)
+               (insert "(defvar foo \"bar\")")
+               (comint-send-input)
+               (insert "foo")
+               (comint-send-input)
+               (buffer-substring-no-properties (point-min)
+                                               (point-max)))))))
+
+(ert-deftest elpl-test-void-variable ()
+  (should (equal
+           "ELPL> foo
+
+(void-variable foo)
+ELPL> "
+           (progn
+             (call-interactively 'elpl)
+             (with-current-buffer "*elpl*"
+               (insert "(makunbound 'foo)")
+               (comint-send-input)
+               (elpl-clean)
+               (insert "foo")
+               (comint-send-input)
+               (buffer-substring-no-properties (point-min)
+                                               (point-max)))))))
+
+(ert-deftest elpl-test-defun ()
+  (should (equal
+           "ELPL> (defun foo nil (message \"bar\"))
+
+foo
+ELPL> (foo)
+
+bar
+
+\"bar\"
+ELPL> "
+           (progn
+             (call-interactively 'elpl)
+             (with-current-buffer "*elpl*"
+               (elpl-clean)
+               (insert "(defun foo nil (message \"bar\"))")
+               (comint-send-input)
+               (insert "(foo)")
+               (comint-send-input)
+               (buffer-substring-no-properties (point-min)
+                                               (point-max)))))))
+
+(ert-deftest elpl-test-void-function ()
+  (should (equal
+           "ELPL> (foo)
+
+(void-function foo)
+ELPL> "
+           (progn
+             (call-interactively 'elpl)
+             (with-current-buffer "*elpl*"
+               (insert "(fmakunbound 'foo)")
+               (comint-send-input)
+               (elpl-clean)
+               (insert "(foo)")
+               (comint-send-input)
                (buffer-substring-no-properties (point-min)
                                                (point-max)))))))
 
