@@ -23,31 +23,50 @@
 (when noninteractive
   (transient-mark-mode))
 
+(defmacro elpl-test--expect (string &rest body)
+  "Execute BODY, waiting for STRING until timeout."
+  `(let ((n 0))
+     ,@body
+     (catch 'timeout
+       (progn
+         (while (not (string= ,string (buffer-substring-no-properties (point-min) (point-max))))
+           (if (> n 100)
+               (progn
+                 (message "==> expect: [%S], actual: [%S]" ,string (buffer-substring-no-properties (point-min) (point-max)))
+                 (throw 'timeout nil))
+             (setq n (1+ n)))
+           (sit-for 0.1))
+         t))))
+
+(defun elpl-test--expect-prompt ()
+  (with-current-buffer "*elpl*"
+    (elpl-test--expect "ELPL> ")))
+
 ;; Prepare elpl buffer before test,
 ;; make the prompt appear in the right place.
-(progn
-  (call-interactively 'elpl)
-  (with-current-buffer "*elpl*"
-    (insert "1")
-    (comint-send-input)))
+(elpl-test--expect
+ "1\nELPL> \n1\nELPL> "
+ (call-interactively 'elpl)
+ (with-current-buffer "*elpl*"
+   (insert "1")
+   (comint-send-input)))
 
 ;;; expression
 
 (ert-deftest elpl-test-empty ()
-  (should (equal
+  (should (elpl-test--expect
            "ELPL>\s
 ELPL> "
            (progn
              (call-interactively 'elpl)
              (with-current-buffer "*elpl*"
                (elpl-clean)
+               (elpl-test--expect-prompt)
                (insert "")
-               (comint-send-input)
-               (buffer-substring-no-properties (point-min)
-                                               (point-max)))))))
+               (comint-send-input))))))
 
 (ert-deftest elpl-test-string ()
-  (should (equal
+  (should (elpl-test--expect
            "ELPL> \"foobar\"
 
 \"foobar\"
@@ -56,13 +75,13 @@ ELPL> "
              (call-interactively 'elpl)
              (with-current-buffer "*elpl*"
                (elpl-clean)
+               (elpl-test--expect-prompt)
                (insert "\"foobar\"")
                (comint-send-input)
-               (buffer-substring-no-properties (point-min)
-                                               (point-max)))))))
+               )))))
 
 (ert-deftest elpl-test-sexp ()
-  (should (equal
+  (should (elpl-test--expect
            "ELPL> (+ 1 2 3)
 
 6
@@ -71,15 +90,15 @@ ELPL> "
              (call-interactively 'elpl)
              (with-current-buffer "*elpl*"
                (elpl-clean)
+               (elpl-test--expect-prompt)
                (insert "(+ 1 2 3)")
                (comint-send-input)
-               (buffer-substring-no-properties (point-min)
-                                               (point-max)))))))
+               )))))
 
 ;;; defvar/defun, undefined variable/function
 
 (ert-deftest elpl-test-defvar ()
-  (should (equal
+  (should (elpl-test--expect
            "ELPL> (defvar foo \"bar\")
 
 foo
@@ -91,15 +110,19 @@ ELPL> "
              (call-interactively 'elpl)
              (with-current-buffer "*elpl*"
                (elpl-clean)
+               (elpl-test--expect-prompt)
                (insert "(defvar foo \"bar\")")
                (comint-send-input)
+               (elpl-test--expect "ELPL> (defvar foo \"bar\")
+
+foo
+ELPL> ")
                (insert "foo")
                (comint-send-input)
-               (buffer-substring-no-properties (point-min)
-                                               (point-max)))))))
+               )))))
 
 (ert-deftest elpl-test-void-variable ()
-  (should (equal
+  (should (elpl-test--expect
            "ELPL> foo
 
 (void-variable foo)
@@ -107,16 +130,22 @@ ELPL> "
            (progn
              (call-interactively 'elpl)
              (with-current-buffer "*elpl*"
+               (elpl-clean)
+               (elpl-test--expect-prompt)
                (insert "(makunbound 'foo)")
                (comint-send-input)
+               (elpl-test--expect "ELPL> (makunbound 'foo)
+
+foo
+ELPL> ")
                (elpl-clean)
+               (elpl-test--expect-prompt)
                (insert "foo")
                (comint-send-input)
-               (buffer-substring-no-properties (point-min)
-                                               (point-max)))))))
+               )))))
 
 (ert-deftest elpl-test-defun ()
-  (should (equal
+  (should (elpl-test--expect
            "ELPL> (defun foo nil (message \"bar\"))
 
 foo
@@ -130,15 +159,19 @@ ELPL> "
              (call-interactively 'elpl)
              (with-current-buffer "*elpl*"
                (elpl-clean)
+               (elpl-test--expect-prompt)
                (insert "(defun foo nil (message \"bar\"))")
                (comint-send-input)
+               (elpl-test--expect "ELPL> (defun foo nil (message \"bar\"))
+
+foo
+ELPL> ")
                (insert "(foo)")
                (comint-send-input)
-               (buffer-substring-no-properties (point-min)
-                                               (point-max)))))))
+               )))))
 
 (ert-deftest elpl-test-void-function ()
-  (should (equal
+  (should (elpl-test--expect
            "ELPL> (foo)
 
 (void-function foo)
@@ -146,18 +179,24 @@ ELPL> "
            (progn
              (call-interactively 'elpl)
              (with-current-buffer "*elpl*"
+               (elpl-clean)
+               (elpl-test--expect-prompt)
                (insert "(fmakunbound 'foo)")
                (comint-send-input)
+               (elpl-test--expect "ELPL> (fmakunbound 'foo)
+
+foo
+ELPL> ")
                (elpl-clean)
+               (elpl-test--expect-prompt)
                (insert "(foo)")
                (comint-send-input)
-               (buffer-substring-no-properties (point-min)
-                                               (point-max)))))))
+               )))))
 
 ;;; line continuation
 
 (ert-deftest elpl-test-string-line-continuation ()
-  (should (equal
+  (should (elpl-test--expect
            "ELPL> \"foo
 bar\"
 
@@ -168,13 +207,13 @@ ELPL> "
              (call-interactively 'elpl)
              (with-current-buffer "*elpl*"
                (elpl-clean)
+               (elpl-test--expect-prompt)
                (insert "\"foo\nbar\"")
                (comint-send-input)
-               (buffer-substring-no-properties (point-min)
-                                               (point-max)))))))
+               )))))
 
 (ert-deftest elpl-test-sexp-line-continuation ()
-  (should (equal
+  (should (elpl-test--expect
            "ELPL> (+
 1
 2
@@ -186,14 +225,14 @@ ELPL> "
              (call-interactively 'elpl)
              (with-current-buffer "*elpl*"
                (elpl-clean)
+               (elpl-test--expect-prompt)
                (insert "(+\n1\n2\n3)") (comint-send-input)
-               (buffer-substring-no-properties (point-min)
-                                               (point-max)))))))
+               )))))
 
 ;;; unclosed
 
 (ert-deftest elpl-test-string-unclosed ()
-  (should (equal
+  (should (elpl-test--expect
            "ELPL> \"foo
 \n\n\n
 bar
@@ -208,17 +247,17 @@ ELPL> "
              (call-interactively 'elpl)
              (with-current-buffer "*elpl*"
                (elpl-clean)
+               (elpl-test--expect-prompt)
                (insert "\"foo")
                (elpl-return)
                (insert "\n\n\n")
                (elpl-return)
                (insert "bar\n\"")
                (elpl-return)
-               (buffer-substring-no-properties (point-min)
-                                               (point-max)))))))
+               )))))
 
 (ert-deftest elpl-test-sexp-unclosed ()
-  (should (equal
+  (should (elpl-test--expect
            "ELPL> (+
 \n\n\n
 1
@@ -232,14 +271,14 @@ ELPL> "
              (call-interactively 'elpl)
              (with-current-buffer "*elpl*"
                (elpl-clean)
+               (elpl-test--expect-prompt)
                (insert "(+")
                (elpl-return)
                (insert "\n\n\n")
                (elpl-return)
                (insert "1\n2\n3\n)")
                (elpl-return)
-               (buffer-substring-no-properties (point-min)
-                                               (point-max)))))))
+               )))))
 
 ;;;
 
