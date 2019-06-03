@@ -35,9 +35,9 @@
 
 (ert-deftest elpl-test-empty ()
   (should (equal
-          "ELPL>\s
+           "ELPL>\s
 ELPL> "
-          (progn
+           (progn
              (call-interactively 'elpl)
              (with-current-buffer "*elpl*"
                (elpl-clean)
@@ -48,11 +48,11 @@ ELPL> "
 
 (ert-deftest elpl-test-string ()
   (should (equal
-          "ELPL> \"foobar\"
+           "ELPL> \"foobar\"
 
 \"foobar\"
 ELPL> "
-          (progn
+           (progn
              (call-interactively 'elpl)
              (with-current-buffer "*elpl*"
                (elpl-clean)
@@ -204,7 +204,7 @@ bar
 bar
 \"
 ELPL> "
-          (progn
+           (progn
              (call-interactively 'elpl)
              (with-current-buffer "*elpl*"
                (elpl-clean)
