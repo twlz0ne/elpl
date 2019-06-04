@@ -39,10 +39,10 @@
 
 (defvar elpl-cli-file-path
   (concat invocation-directory invocation-name)
-  "Path to the program used by `elpl'")
+  "Path to the program used by `elpl'.")
 
 (defun elpl-cli-arguments ()
-  "Commandline arguments to pass to `elpl-cli'"
+  "Commandline arguments to pass to `elpl-cli'."
   `("--batch"
     "--eval"
     ,(format "%S" '(let ((s ""))
@@ -67,16 +67,17 @@
     (define-key map "\t" 'completion-at-point)
     (define-key map (kbd "RET") 'elpl-return)
     map)
-  "Basic mode map for `elpl'")
+  "Basic mode map for `elpl'.")
 
 (defvar elpl-prompt-regexp "^\\(?:\\[[^@]+@[^@]+\\]\\)"
   "Prompt for `elpl'.")
 
 (defun elpl-pm nil
-  ;; Return the process mark of the current buffer.
+  "Return the process mark of the current buffer."
   (process-mark (get-buffer-process (current-buffer))))
 
 (defun elpl-return ()
+  "Newline or evaluate the sexp before the prompt."
   (interactive)
   (let ((state
              (save-excursion
@@ -114,7 +115,7 @@
       (elpl-mode))))
 
 (defun elpl--initialize ()
-  "Helper function to initialize Elpl"
+  "Helper function to initialize Elpl."
   (setq comint-process-echoes t)
   (setq comint-use-prompt-regexp t))
 
