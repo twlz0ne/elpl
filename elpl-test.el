@@ -17,6 +17,7 @@
 
 ;;; Code:
 
+(require 'cl)
 (require 'ert)
 (require 'elpl)
 
@@ -25,9 +26,7 @@
 
 (setq-default comint-prompt-read-only nil)
 
-(defun elpl-test--insert (string)
-  (goto-char (point-max))
-  (insert string))
+(defvar elpl-test-send--expect-string nil)
 
 (defmacro elpl-test--expect (string &rest body)
   "Execute BODY, waiting for STRING until timeout."
@@ -38,24 +37,41 @@
          (while (not (string= ,string (buffer-substring-no-properties (point-min) (point-max))))
            (if (> n 100)
                (progn
-                 (message "==> expect: [%S], actual: [%S]" ,string (buffer-substring-no-properties (point-min) (point-max)))
+                 (message "==> [TIMEOUT] expect: [%S], actual: [%S]" ,string (buffer-substring-no-properties (point-min) (point-max)))
                  (throw 'timeout nil))
              (setq n (1+ n)))
            (sit-for 0.1))
          t))))
 
 (defun elpl-test--expect-prompt ()
-  (with-current-buffer "*elpl*"
-    (elpl-test--expect "ELPL> ")))
+  (elpl-test--expect "ELPL> "))
 
-;; Prepare elpl buffer before test,
-;; make the prompt appear in the right place.
-(elpl-test--expect
- "1\nELPL> \n1\nELPL> "
- (call-interactively 'elpl)
- (with-current-buffer "*elpl*"
-   (elpl-test--insert "1")
-   (comint-send-input)))
+(cl-defun elpl-test-send (&key input result)
+  (goto-char (point-max))
+  (insert input)
+  (elpl-return)
+  (if result
+      (progn
+        (setq elpl-test-send--expect-string
+              (concat elpl-test-send--expect-string
+                      input
+                      "\n\n"
+                      result
+                      "\n"
+                      "ELPL> "))
+        (elpl-test--expect elpl-test-send--expect-string))
+    (setq elpl-test-send--expect-string
+          (concat elpl-test-send--expect-string
+                  input
+                  "\n"))))
+
+(defmacro with-elpl-test (&rest body)
+  `(let ((elpl-test-send--expect-string "ELPL> "))
+     (call-interactively 'elpl)
+     (with-current-buffer "*elpl*"
+       (elpl-clean)
+       (elpl-test--expect-prompt)
+       ,@body)))
 
 ;;; expression
 
@@ -63,13 +79,9 @@
   (should (elpl-test--expect
            "ELPL>\s
 ELPL> "
-           (progn
-             (call-interactively 'elpl)
-             (with-current-buffer "*elpl*"
-               (elpl-clean)
-               (elpl-test--expect-prompt)
-               (elpl-test--insert "")
-               (comint-send-input))))))
+           (with-elpl-test
+            (elpl-test-send :input "")
+            ))))
 
 (ert-deftest elpl-test-string ()
   (should (elpl-test--expect
@@ -77,14 +89,10 @@ ELPL> "
 
 \"foobar\"
 ELPL> "
-           (progn
-             (call-interactively 'elpl)
-             (with-current-buffer "*elpl*"
-               (elpl-clean)
-               (elpl-test--expect-prompt)
-               (elpl-test--insert "\"foobar\"")
-               (comint-send-input)
-               )))))
+           (with-elpl-test
+            (elpl-test-send :input "\"foobar\""
+                            :result "\"foobar\"")
+            ))))
 
 (ert-deftest elpl-test-sexp ()
   (should (elpl-test--expect
@@ -92,14 +100,10 @@ ELPL> "
 
 6
 ELPL> "
-           (progn
-             (call-interactively 'elpl)
-             (with-current-buffer "*elpl*"
-               (elpl-clean)
-               (elpl-test--expect-prompt)
-               (elpl-test--insert "(+ 1 2 3)")
-               (comint-send-input)
-               )))))
+           (with-elpl-test
+            (elpl-test-send :input "(+ 1 2 3)"
+                            :result "6")
+            ))))
 
 ;;; defvar/defun, undefined variable/function
 
@@ -112,43 +116,28 @@ ELPL> foo
 
 \"bar\"
 ELPL> "
-           (progn
-             (call-interactively 'elpl)
-             (with-current-buffer "*elpl*"
-               (elpl-clean)
-               (elpl-test--expect-prompt)
-               (elpl-test--insert "(defvar foo \"bar\")")
-               (comint-send-input)
-               (elpl-test--expect "ELPL> (defvar foo \"bar\")
-
-foo
-ELPL> ")
-               (elpl-test--insert "foo")
-               (comint-send-input)
-               )))))
+           (with-elpl-test
+            (elpl-test-send :input "(defvar foo \"bar\")"
+                            :result "foo")
+            (elpl-test-send :input "foo"
+                            :result "\"bar\"")
+            ))))
 
 (ert-deftest elpl-test-void-variable ()
   (should (elpl-test--expect
-           "ELPL> foo
+           "ELPL> (makunbound 'foo)
+
+foo
+ELPL> foo
 
 (void-variable foo)
 ELPL> "
-           (progn
-             (call-interactively 'elpl)
-             (with-current-buffer "*elpl*"
-               (elpl-clean)
-               (elpl-test--expect-prompt)
-               (elpl-test--insert "(makunbound 'foo)")
-               (comint-send-input)
-               (elpl-test--expect "ELPL> (makunbound 'foo)
-
-foo
-ELPL> ")
-               (elpl-clean)
-               (elpl-test--expect-prompt)
-               (elpl-test--insert "foo")
-               (comint-send-input)
-               )))))
+           (with-elpl-test
+            (elpl-test-send :input "(makunbound 'foo)"
+                            :result "foo")
+            (elpl-test-send :input "foo"
+                            :result "(void-variable foo)")
+            ))))
 
 (ert-deftest elpl-test-defun ()
   (should (elpl-test--expect
@@ -161,43 +150,28 @@ bar
 
 \"bar\"
 ELPL> "
-           (progn
-             (call-interactively 'elpl)
-             (with-current-buffer "*elpl*"
-               (elpl-clean)
-               (elpl-test--expect-prompt)
-               (elpl-test--insert "(defun foo nil (message \"bar\"))")
-               (comint-send-input)
-               (elpl-test--expect "ELPL> (defun foo nil (message \"bar\"))
-
-foo
-ELPL> ")
-               (elpl-test--insert "(foo)")
-               (comint-send-input)
-               )))))
+           (with-elpl-test
+            (elpl-test-send :input "(defun foo nil (message \"bar\"))"
+                            :result "foo")
+            (elpl-test-send :input "(foo)"
+                            :result "bar\n\n\"bar\"")
+            ))))
 
 (ert-deftest elpl-test-void-function ()
   (should (elpl-test--expect
-           "ELPL> (foo)
+           "ELPL> (fmakunbound 'foo)
+
+foo
+ELPL> (foo)
 
 (void-function foo)
 ELPL> "
-           (progn
-             (call-interactively 'elpl)
-             (with-current-buffer "*elpl*"
-               (elpl-clean)
-               (elpl-test--expect-prompt)
-               (elpl-test--insert "(fmakunbound 'foo)")
-               (comint-send-input)
-               (elpl-test--expect "ELPL> (fmakunbound 'foo)
-
-foo
-ELPL> ")
-               (elpl-clean)
-               (elpl-test--expect-prompt)
-               (elpl-test--insert "(foo)")
-               (comint-send-input)
-               )))))
+           (with-elpl-test
+            (elpl-test-send :input "(fmakunbound 'foo)"
+                            :result "foo")
+            (elpl-test-send :input "(foo)"
+                            :result "(void-function foo)")
+            ))))
 
 ;;; line continuation
 
@@ -209,14 +183,10 @@ bar\"
 \"foo
 bar\"
 ELPL> "
-           (progn
-             (call-interactively 'elpl)
-             (with-current-buffer "*elpl*"
-               (elpl-clean)
-               (elpl-test--expect-prompt)
-               (elpl-test--insert "\"foo\nbar\"")
-               (comint-send-input)
-               )))))
+           (with-elpl-test
+            (elpl-test-send :input  "\"foo\nbar\""
+                            :result "\"foo\nbar\""))
+           )))
 
 (ert-deftest elpl-test-sexp-line-continuation ()
   (should (elpl-test--expect
@@ -227,13 +197,10 @@ ELPL> "
 
 6
 ELPL> "
-           (progn
-             (call-interactively 'elpl)
-             (with-current-buffer "*elpl*"
-               (elpl-clean)
-               (elpl-test--expect-prompt)
-               (elpl-test--insert "(+\n1\n2\n3)") (comint-send-input)
-               )))))
+           (with-elpl-test
+            (elpl-test-send :input "(+\n1\n2\n3)"
+                            :result "6"))
+           )))
 
 ;;; unclosed
 
@@ -249,18 +216,12 @@ bar
 bar
 \"
 ELPL> "
-           (progn
-             (call-interactively 'elpl)
-             (with-current-buffer "*elpl*"
-               (elpl-clean)
-               (elpl-test--expect-prompt)
-               (elpl-test--insert "\"foo")
-               (elpl-return)
-               (elpl-test--insert "\n\n\n")
-               (elpl-return)
-               (elpl-test--insert "bar\n\"")
-               (elpl-return)
-               )))))
+           (with-elpl-test
+            (elpl-test-send :input "\"foo")
+            (elpl-test-send :input "\n\n\n")
+            (elpl-test-send :input "bar\n\""
+                            :result "\"foo\n\n\n\n\nbar\n\"")
+            ))))
 
 (ert-deftest elpl-test-sexp-unclosed ()
   (should (elpl-test--expect
@@ -273,18 +234,12 @@ ELPL> "
 
 6
 ELPL> "
-           (progn
-             (call-interactively 'elpl)
-             (with-current-buffer "*elpl*"
-               (elpl-clean)
-               (elpl-test--expect-prompt)
-               (elpl-test--insert "(+")
-               (elpl-return)
-               (elpl-test--insert "\n\n\n")
-               (elpl-return)
-               (elpl-test--insert "1\n2\n3\n)")
-               (elpl-return)
-               )))))
+           (with-elpl-test
+            (elpl-test-send :input "(+")
+            (elpl-test-send :input "\n\n\n")
+            (elpl-test-send :input "1\n2\n3\n)"
+                            :result "6")
+            ))))
 
 ;;;
 
