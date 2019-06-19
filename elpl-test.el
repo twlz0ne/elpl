@@ -241,6 +241,96 @@ ELPL> "
                             :result "6")
             ))))
 
+;;; lexical binding
+
+(ert-deftest elpl-test-lexical-binding-default-t ()
+  (should (elpl-test--expect
+           "ELPL> lexical-binding
+
+t
+ELPL> (defun fun-fun (f) (lambda (x) (funcall f x)))
+
+fun-fun
+ELPL> (funcall (fun-fun #'1+) 3)
+
+4
+ELPL> "
+           (progn
+             (let ((kill-buffer-query-functions nil))
+               (ignore-errors (kill-buffer "*elpl*")))
+             (with-elpl-test
+              (elpl-test-send :input "lexical-binding"
+                              :result "t")
+              (elpl-test-send :input "(defun fun-fun (f) (lambda (x) (funcall f x)))"
+                              :result "fun-fun")
+              (elpl-test-send :input "(funcall (fun-fun #'1+) 3)"
+                              :result "4")
+              )))))
+
+(ert-deftest elpl-test-lexical-binding-default-nil ()
+  (should (elpl-test--expect
+           "ELPL> lexical-binding
+
+nil
+ELPL> (defun fun-fun (f) (lambda (x) (funcall f x)))
+
+fun-fun
+ELPL> (funcall (fun-fun #'1+) 3)
+
+(void-variable f)
+ELPL> "
+           (let ((elpl-lexical-binding nil))
+               (let ((kill-buffer-query-functions nil))
+                 (ignore-errors (kill-buffer "*elpl*")))
+             (with-elpl-test
+              (elpl-test-send :input "lexical-binding"
+                              :result "nil")
+              (elpl-test-send :input "(defun fun-fun (f) (lambda (x) (funcall f x)))"
+                              :result "fun-fun")
+              (elpl-test-send :input "(funcall (fun-fun #'1+) 3)"
+                              :result "(void-variable f)")
+              )))))
+
+(ert-deftest elpl-test-lexical-binding-change-in-progress ()
+  (should (elpl-test--expect
+           "ELPL> (setq lexical-binding t)
+
+t
+ELPL> (defun fun-fun (f) (lambda (x) (funcall f x)))
+
+fun-fun
+ELPL> (funcall (fun-fun #'1+) 3)
+
+4
+ELPL> (setq lexical-binding nil)
+
+nil
+ELPL> (defun fun-fun (f) (lambda (x) (funcall f x)))
+
+fun-fun
+ELPL> (funcall (fun-fun #'1+) 3)
+
+(void-variable f)
+ELPL> "
+           (with-elpl-test
+            ;; set t
+            (elpl-test-send :input "(setq lexical-binding t)"
+                            :result "t")
+            (elpl-test-send :input "(defun fun-fun (f) (lambda (x) (funcall f x)))"
+                            :result "fun-fun")
+            (elpl-test-send :input "(funcall (fun-fun #'1+) 3)"
+                            :result "4")
+            ;; set nil
+            (elpl-test-send :input "(setq lexical-binding nil)"
+                            :result "nil")
+
+            (elpl-test-send :input "(defun fun-fun (f) (lambda (x) (funcall f x)))"
+                            :result "fun-fun")
+
+            (elpl-test-send :input "(funcall (fun-fun #'1+) 3)"
+                            :result "(void-variable f)")
+            ))))
+
 ;;;
 
 (provide 'elpl-test)

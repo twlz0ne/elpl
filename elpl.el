@@ -37,6 +37,9 @@
 
 (require 'comint)
 
+(defvar elpl-lexical-binding t
+  "Whether to use lexical binding when evaluating code.")
+
 (defvar elpl-cli-file-path
   (concat invocation-directory invocation-name)
   "Path to the program used by `elpl'.")
@@ -44,6 +47,8 @@
 (defun elpl-cli-arguments ()
   "Commandline arguments to pass to `elpl-cli'."
   `("--batch"
+    "--eval"
+    ,(format "(setq lexical-binding %s)" elpl-lexical-binding)
     "--eval"
     ,(format "%S" '(let ((s ""))
                      (while t
@@ -55,7 +60,7 @@
                        (condition-case err
                            (progn
                              (unless (string= s "\n")
-                               (print (eval (read s))))
+                               (print (eval (read s) lexical-binding)))
                              (setq s ""))
                          (error
                           (unless (string= "(end-of-file)" (format "%S" err))
