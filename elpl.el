@@ -85,13 +85,13 @@
   "Newline or evaluate the sexp before the prompt."
   (interactive)
   (let ((state
-             (save-excursion
-               (end-of-line)
-               (parse-partial-sexp (elpl-pm)
-                                   (point)))))
-        (if (and (< (car state) 1) (not (nth 3 state)))
-            (comint-send-input)
-          (newline-and-indent))))
+         (save-excursion
+           (end-of-line)
+           (parse-partial-sexp (elpl-pm)
+                               (point)))))
+    (if (and (< (car state) 1) (not (nth 3 state)))
+        (comint-send-input)
+      (newline-and-indent))))
 
 (defun elpl-clean ()
   "Clean the elpl buffer."

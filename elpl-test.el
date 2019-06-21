@@ -280,8 +280,8 @@ ELPL> (funcall (fun-fun #'1+) 3)
 (void-variable f)
 ELPL> "
            (let ((elpl-lexical-binding nil))
-               (let ((kill-buffer-query-functions nil))
-                 (ignore-errors (kill-buffer "*elpl*")))
+             (let ((kill-buffer-query-functions nil))
+               (ignore-errors (kill-buffer "*elpl*")))
              (with-elpl-test
               (elpl-test-send :input "lexical-binding"
                               :result "nil")
