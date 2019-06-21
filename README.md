@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.com/twlz0ne/elpl.svg?branch=master)](https://travis-ci.com/twlz0ne/elpl)
 
-## elpl
+## ELPL
 
 Provides a simple interface to evaluating Emacs Lisp expressions but without contaminating current Emacs.
 

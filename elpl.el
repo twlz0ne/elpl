@@ -1,4 +1,4 @@
-;;; elpl.el --- Elpl -*- lexical-binding: t; -*-
+;;; elpl.el --- Emacs Lisp REPL -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2019 Gong Qijian <gongqijian@gmail.com>
 
@@ -20,7 +20,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
@@ -39,6 +39,14 @@
 
 (defvar elpl-lexical-binding t
   "Whether to use lexical binding when evaluating code.")
+
+(defcustom elpl-prompt-read-only t
+  "If non-nil, the ELPL prompt is read only."
+  :type 'boolean
+  :group 'elpl)
+
+(defcustom elpl-use-prompt-regexp t
+  "If non-nil, use `elpl-prompt-regexp' to recognize prompts.")
 
 (defvar elpl-cli-file-path
   (concat invocation-directory invocation-name)
@@ -69,10 +77,10 @@
 
 (defvar elpl-mode-map
   (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
-    (define-key map "\t" 'completion-at-point)
+    (define-key map (kbd "C-j") 'electric-newline-and-maybe-indent)
     (define-key map (kbd "RET") 'elpl-return)
     map)
-  "Basic mode map for `elpl'.")
+  "Keymap for ELPL mode.")
 
 (defvar elpl-prompt-regexp "^\\(?:\\[[^@]+@[^@]+\\]\\)"
   "Prompt for `elpl'.")
@@ -94,7 +102,7 @@
       (newline-and-indent))))
 
 (defun elpl-clean ()
-  "Clean the elpl buffer."
+  "Clean the ELPL buffer."
   (interactive)
   (when (eq major-mode 'elpl-mode)
     (let ((comint-buffer-maximum-size 0))
@@ -104,8 +112,8 @@
 (defun elpl ()
   "Run an inferior instance of `elpl-cli' inside Emacs."
   (interactive)
-  (let* ((elpl-program elpl-cli-file-path)
-         (buffer (comint-check-proc "elpl")))
+  (let ((elpl-program elpl-cli-file-path)
+        (buffer (comint-check-proc "elpl")))
     ;; pop to the "*elpl*" buffer if the process is dead, the
     ;; buffer is missing or it's got the wrong mode.
     (pop-to-buffer-same-window
@@ -119,32 +127,34 @@
              elpl-program nil (elpl-cli-arguments))
       (elpl-mode))))
 
-(defun elpl--initialize ()
-  "Helper function to initialize Elpl."
-  (setq comint-process-echoes t)
-  (setq comint-use-prompt-regexp t))
+(define-derived-mode elpl-mode comint-mode "ELPL"
+  "Major mode for interactively evaluating Emacs Lisp expressions.
+Uses the interface provided by `comint-mode' (wich see).
 
-(define-derived-mode elpl-mode comint-mode "Elpl"
-  "Major mode for `elpl'.
+* \\<elpl-mode-map>\\[electric-newline-and-maybe-indent] inserts a new line.
+
+* \\[elpl-return] inserts a newline, or evaluates a complete expression.
+
+* \\[elpl-clean] clean the ELPL buffer.
 
 \\<elpl-mode-map>"
-  nil "Elpl"
+  nil "ELPL"
+  (setq-local comint-process-echoes t)
+  (setq-local comint-use-prompt-regexp elpl-use-prompt-regexp)
   ;; this sets up the prompt so it matches things like: [foo@bar]
-  (setq comint-prompt-regexp elpl-prompt-regexp)
+  (setq-local comint-prompt-regexp elpl-prompt-regexp)
   ;; this makes it read only; a contentious subject as some prefer the
   ;; buffer to be overwritable.
-  (setq comint-prompt-read-only t)
+  (setq-local comint-prompt-read-only elpl-prompt-read-only)
   ;; this makes it so commands like M-{ and M-} work.
-  (set (make-local-variable 'paragraph-separate) "\\'")
-  (set (make-local-variable 'font-lock-defaults)
-       '((lisp-el-font-lock-keywords lisp-el-font-lock-keywords-1 lisp-el-font-lock-keywords-2)
-         nil nil nil nil
-         (font-lock-mark-block-function . mark-defun)
-         (font-lock-extra-managed-props help-echo)
-         (font-lock-syntactic-face-function . lisp-font-lock-syntactic-face-function)))
-  (set (make-local-variable 'paragraph-start) elpl-prompt-regexp))
-
-(add-hook 'elpl-mode-hook 'elpl--initialize)
+  (setq-local paragraph-separate "\\'")
+  (setq-local font-lock-defaults
+              '((lisp-el-font-lock-keywords lisp-el-font-lock-keywords-1 lisp-el-font-lock-keywords-2)
+                nil nil nil nil
+                (font-lock-mark-block-function . mark-defun)
+                (font-lock-extra-managed-props help-echo)
+                (font-lock-syntactic-face-function . lisp-font-lock-syntactic-face-function)))
+  (setq-local paragraph-start elpl-prompt-regexp))
 
 (provide 'elpl)
 
