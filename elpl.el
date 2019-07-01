@@ -109,6 +109,7 @@
       (comint-truncate-buffer)
       )))
 
+;;;###autoload
 (defun elpl ()
   "Run an inferior instance of `elpl-cli' inside Emacs."
   (interactive)
