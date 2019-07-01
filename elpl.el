@@ -106,8 +106,7 @@
   (interactive)
   (when (eq major-mode 'elpl-mode)
     (let ((comint-buffer-maximum-size 0))
-      (comint-truncate-buffer)
-      )))
+      (comint-truncate-buffer))))
 
 ;;;###autoload
 (defun elpl ()
