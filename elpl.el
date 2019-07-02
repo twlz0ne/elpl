@@ -50,7 +50,9 @@
   :group 'elpl)
 
 (defcustom elpl-use-prompt-regexp t
-  "If non-nil, use `elpl-prompt-regexp' to recognize prompts.")
+  "If non-nil, use `elpl-prompt-regexp' to recognize prompts."
+  :type 'boolean
+  :group 'elpl)
 
 (defvar elpl-cli-file-path
   (concat invocation-directory invocation-name)
