@@ -70,10 +70,10 @@
                              (unless (string= s "\n")
                                (print (eval (read s) lexical-binding)))
                              (setq s ""))
+                         (end-of-file)
                          (error
-                          (unless (string= "(end-of-file)" (format "%S" err))
-                            (setq s "")
-                            (print err)))))))))
+                          (setq s "")
+                          (print err))))))))
 
 (defvar elpl-mode-map
   (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
