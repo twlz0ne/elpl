@@ -40,6 +40,10 @@
 (defvar elpl-lexical-binding t
   "Whether to use lexical binding when evaluating code.")
 
+(defgroup elpl nil
+  "Emacs Lisp REPL."
+  :group 'lisp)
+
 (defcustom elpl-prompt-read-only t
   "If non-nil, the ELPL prompt is read only."
   :type 'boolean
