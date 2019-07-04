@@ -49,7 +49,7 @@
   :type 'boolean
   :group 'elpl)
 
-(defcustom elpl-use-prompt-regexp t
+(defcustom elpl-use-prompt-regexp nil
   "If non-nil, use `elpl-prompt-regexp' to recognize prompts."
   :type 'boolean
   :group 'elpl)
@@ -160,7 +160,12 @@ Uses the interface provided by `comint-mode' (wich see).
                 (font-lock-mark-block-function . mark-defun)
                 (font-lock-extra-managed-props help-echo)
                 (font-lock-syntactic-face-function . lisp-font-lock-syntactic-face-function)))
-  (setq-local paragraph-start elpl-prompt-regexp))
+  (setq-local paragraph-start elpl-prompt-regexp)
+  (unless comint-use-prompt-regexp
+    (let ((inhibit-read-only t))
+      (add-text-properties
+       (point-min) (point-max)
+       '(rear-nonsticky t field output inhibit-line-move-field-capture t)))))
 
 (provide 'elpl)
 

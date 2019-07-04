@@ -65,6 +65,14 @@
                   input
                   "\n"))))
 
+(cl-defun elpl-test-previous-input (n &key expect)
+  (comint-previous-input n)
+  (should (equal (buffer-substring-no-properties (point-min) (point-max))
+                 expect)))
+
+(cl-defun elpl-test-next-input (n &key expect)
+  (elpl-test-previous-input (- n) :expect expect))
+
 (defmacro with-elpl-test (&rest body)
   `(let ((elpl-test-send--expect-string "ELPL> "))
      (call-interactively 'elpl)
@@ -330,6 +338,30 @@ ELPL> "
             (elpl-test-send :input "(funcall (fun-fun #'1+) 3)"
                             :result "(void-variable f)")
             ))))
+
+;;; input ring
+
+(ert-deftest elpl-test-input-ring ()
+  (with-elpl-test
+   (dotimes (_ (ring-length comint-input-ring))
+     (ring-remove comint-input-ring 0))
+
+   (elpl-test-send :input "1"            :result "1")
+   (elpl-test-send :input "\"foo\""      :result "\"foo\"")
+   (elpl-test-send :input "(+\n1\n2\n3)" :result "6")
+
+   (elpl-clean)
+
+   (elpl-test-previous-input 1 :expect "ELPL> (+\n1\n2\n3)")
+   (elpl-test-previous-input 1 :expect "ELPL> \"foo\"")
+   (elpl-test-previous-input 1 :expect "ELPL> 1")
+   (elpl-test-previous-input 1 :expect "ELPL> ")
+
+   (elpl-test-next-input     1 :expect "ELPL> 1")
+   (elpl-test-next-input     1 :expect "ELPL> \"foo\"")
+   (elpl-test-next-input     1 :expect "ELPL> (+\n1\n2\n3)")
+   (elpl-test-next-input     1 :expect "ELPL> ")
+   ))
 
 ;;;
 
