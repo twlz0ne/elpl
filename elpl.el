@@ -4,7 +4,7 @@
 
 ;; Author: Gong Qijian <gongqijian@gmail.com>
 ;; Created: 2019/05/28
-;; Version: 0.1.0
+;; Version: 0.1.1
 ;; Package-Requires: ((emacs "24.4"))
 ;; URL: https://github.com/twlz0ne/elpl
 ;; Keywords: lisp, tool
@@ -31,11 +31,16 @@
 
 ;;; Change Log:
 
+;;  0.1.1  2019/12/29  Add support for edit-indirect.
 ;;  0.1.0  2019/05/28  Initial version.
 
 ;;; Code:
 
 (require 'comint)
+
+(declare-function edit-indirect-region "edit-indirect")
+(defvar edit-indirect-guess-mode-function)
+(defvar edit-indirect-after-creation-hook)
 
 (defvar elpl-lexical-binding t
   "Whether to use lexical binding when evaluating code.")
@@ -93,16 +98,25 @@
 
 (defun elpl-pm nil
   "Return the process mark of the current buffer."
-  (process-mark (get-buffer-process (current-buffer))))
+  (let ((pm (process-mark (get-buffer-process (current-buffer)))))
+    (if (= pm (point-max))
+        ;; Reset pm after `edit-inderct-commit'
+        (let ((last-pm (previous-single-property-change (point) 'read-only)))
+          (if last-pm
+              (save-excursion
+                (goto-char last-pm)
+                (comint-set-process-mark)
+                last-pm)
+            pm))
+      pm)))
 
 (defun elpl-return ()
   "Newline or evaluate the sexp before the prompt."
   (interactive)
-  (let ((state
-         (save-excursion
-           (end-of-line)
-           (parse-partial-sexp (elpl-pm)
-                               (point)))))
+  (let ((state (parse-partial-sexp (elpl-pm)
+                                   (save-excursion
+                                     (end-of-line)
+                                     (point)))))
     (if (and (< (car state) 1) (not (nth 3 state)))
         (comint-send-input)
       (newline-and-indent))))
@@ -113,6 +127,37 @@
   (when (eq major-mode 'elpl-mode)
     (let ((comint-buffer-maximum-size 0))
       (comint-truncate-buffer))))
+
+(defun elpl-edit ()
+  "Edit in seperate buffer."
+  (interactive)
+  (if (fboundp 'edit-indirect-region)
+      (let ((edit-indirect-guess-mode-function
+             (lambda (&rest _)
+               (emacs-lisp-mode)))
+            (edit-indirect-after-creation-hook
+             (lambda ()
+               (setq-local header-line-format
+                           (substitute-command-keys
+                            (concat
+                             "*EDIT* "
+                             "\\[edit-indirect-commit]: Exit, "
+                             "\\[edit-indirect-abort]: Abort"))))))
+        (edit-indirect-region
+         (if (memq 'read-only (text-properties-at (point)))
+             (error "Cannot edit at point")
+           (if (and (= (char-before) ?\s)
+                    (memq 'read-only (text-properties-at (1- (point)))))
+               (point)
+             (previous-single-property-change (point) 'read-only)))
+         (if (next-single-property-change (point) 'read-only)
+             (error "Cannot edit at point")
+           (point-max))
+         'display-buffer))
+    (when (y-or-n-p "Package edit-indirect needed to edit. Install it now? ")
+      (package-refresh-contents)
+      (package-install 'edit-indirect)
+      (elpl-edit))))
 
 ;;;###autoload
 (defun elpl ()
