@@ -5,23 +5,25 @@
 
 Provides a simple interface to evaluating Emacs Lisp expressions but without contaminating current Emacs.
 
+<p float="left" align="center">
+  <img src="/screenshot.png" />
+</p>
+
 ## Installation
 
 Clone this repository, or install from MELPA. Add the following to your `.emacs`:
 
 ```elisp
 (require 'elpl)
+(define-key elpl-mode-map (kbd "C-c l") 'elpl-clean)
+(define-key elpl-mode-map (kbd "C-c '") 'elpl-edit)
 ```
 
 ## Usage
 
-```
-M-x elpl
-```
-
-<p float="left" align="center">
-  <img src="/screenshot.png" />
-</p>
+- Start: <kbd>M-x elpl</kbd>
+- Clean the `*elpl*` buffer: <kbd>C-c l</kbd>
+- Edit in a separate buffer: <kbd>C-c '</kbd>
 
 ## Credits
 
