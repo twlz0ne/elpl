@@ -194,11 +194,8 @@ Return the output."
           (accept-process-output process))))
     (replace-regexp-in-string "\nELPL> $" "" elpl--output-string)))
 
-(defun elpl-completion-at-point ()
-  "Function for ‘completion-at-point-functions’ in ‘elpl-mode’."
-  (interactive)
-  (let* ((bounds (bounds-of-thing-at-point 'symbol))
-         (chsyn (char-syntax (char-before (car bounds))))
+(defun elpl--completion-in-region (beg end)
+  (let* ((chsyn (char-syntax (char-before beg)))
          (process (get-buffer-process (current-buffer)))
          (output
           (elpl--send-string-silent
@@ -213,11 +210,18 @@ Return the output."
                      (?\( '(functionp it))
                      (?\' '(or (functionp it) (symbol-plist ti)))
                      (t   '(and (symbolp it) (not (functionp it)))))
-                   (buffer-substring-no-properties (car bounds) (cdr bounds)))
+                   (buffer-substring-no-properties beg end))
            process)))
-    (list (car bounds) (cdr bounds) (mapcar (lambda (it)
-                                              (symbol-name it))
-                                            (read output)))))
+    (list beg end (mapcar (lambda (it)
+                            (symbol-name it))
+                          (read output)))))
+
+(defun elpl-completion-at-point ()
+  "Function for ‘completion-at-point-functions’ in ‘elpl-mode’."
+  (interactive)
+  (let ((bounds (bounds-of-thing-at-point 'symbol)))
+    (when bounds
+      (elpl--completion-in-region (car bounds) (cdr bounds)))))
 
 ;;;###autoload
 (defun elpl ()
