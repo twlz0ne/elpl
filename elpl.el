@@ -4,7 +4,7 @@
 
 ;; Author: Gong Qijian <gongqijian@gmail.com>
 ;; Created: 2019/05/28
-;; Version: 0.1.1
+;; Version: 0.1.2
 ;; Package-Requires: ((emacs "24.4"))
 ;; URL: https://github.com/twlz0ne/elpl
 ;; Keywords: lisp, tool
@@ -31,12 +31,14 @@
 
 ;;; Change Log:
 
+;;  0.1.2  2020/08/21  Add support for completion-at-point.
 ;;  0.1.1  2019/12/29  Add support for edit-indirect.
 ;;  0.1.0  2019/05/28  Initial version.
 
 ;;; Code:
 
 (require 'comint)
+(require 'cl-lib)
 
 (declare-function edit-indirect-region "edit-indirect")
 (defvar edit-indirect-guess-mode-function)
@@ -90,6 +92,7 @@
   (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
     (define-key map (kbd "C-j") 'electric-newline-and-maybe-indent)
     (define-key map (kbd "RET") 'elpl-return)
+    (define-key map (kbd "TAB") 'completion-at-point)
     map)
   "Keymap for ELPL mode.")
 
@@ -159,6 +162,63 @@
       (package-install 'edit-indirect)
       (elpl-edit))))
 
+;;; completion
+
+(defvar elpl--output-filter-in-progress nil
+  "Internal variable for indicating the process finished or not.")
+
+(defvar elpl--output-string
+  "Internal variable for accumulating the process output.")
+
+(defun elpl--output-finished-p (string)
+  (string-match-p "\nELPL> $" string))
+
+(defun elpl--output-filter (string)
+  (setq elpl--output-string (concat elpl--output-string string))
+  (setq elpl--output-filter-in-progress
+        (not (elpl--output-finished-p string)))
+  "")
+
+(defun elpl--send-string-silent (string &optional process)
+  "Send STRING to PROCESS without printing the output to screen.
+Return the output."
+  (let ((process (or process (get-buffer-process (current-buffer))))
+        (comint-preoutput-filter-functions
+         '(elpl--output-filter))
+        (elpl--output-filter-in-progress t))
+    (setq elpl--output-string nil)
+    (with-current-buffer (process-buffer process)
+      (with-local-quit
+        (comint-send-string process (concat string "\n"))
+        (while elpl--output-filter-in-progress
+          (accept-process-output process))))
+    (replace-regexp-in-string "\nELPL> $" "" elpl--output-string)))
+
+(defun elpl-completion-at-point ()
+  "Function for ‘completion-at-point-functions’ in ‘elpl-mode’."
+  (interactive)
+  (let* ((bounds (bounds-of-thing-at-point 'symbol))
+         (chsyn (char-syntax (char-before (car bounds))))
+         (process (get-buffer-process (current-buffer)))
+         (output
+          (elpl--send-string-silent
+           (format "(let (table)
+                      (mapatoms
+                       (lambda (it)
+                         (when (and %s (string-prefix-p \"%s\" (symbol-name it)))
+                           (push it table)))
+                       obarray)
+                      table)"
+                   (cl-case chsyn
+                     (?\( '(functionp it))
+                     (?\' '(or (functionp it) (symbol-plist ti)))
+                     (t   '(and (symbolp it) (not (functionp it)))))
+                   (buffer-substring-no-properties (car bounds) (cdr bounds)))
+           process)))
+    (list (car bounds) (cdr bounds) (mapcar (lambda (it)
+                                              (symbol-name it))
+                                            (read output)))))
+
 ;;;###autoload
 (defun elpl ()
   "Run an inferior instance of `elpl-cli' inside Emacs."
@@ -206,6 +266,7 @@ Uses the interface provided by `comint-mode' (wich see).
                 (font-lock-extra-managed-props help-echo)
                 (font-lock-syntactic-face-function . lisp-font-lock-syntactic-face-function)))
   (setq-local paragraph-start elpl-prompt-regexp)
+  (add-hook 'completion-at-point-functions 'elpl-completion-at-point nil 'local)
   (unless comint-use-prompt-regexp
     (let ((inhibit-read-only t))
       (add-text-properties
