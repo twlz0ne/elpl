@@ -4,7 +4,7 @@
 
 ;; Author: Gong Qijian <gongqijian@gmail.com>
 ;; Created: 2019/05/28
-;; Version: 0.1.3
+;; Version: 0.1.4
 ;; Package-Requires: ((emacs "24.4"))
 ;; URL: https://github.com/twlz0ne/elpl
 ;; Keywords: lisp, tool
@@ -87,6 +87,7 @@
     (define-key map (kbd "C-j") 'electric-newline-and-maybe-indent)
     (define-key map (kbd "RET") 'elpl-return)
     (define-key map (kbd "TAB") 'completion-at-point)
+    (define-key map (kbd "`")   'elpl-electric-backquote)
     map)
   "Keymap for ELPL mode.")
 
@@ -242,6 +243,19 @@ Return the output."
       (apply 'make-comint-in-buffer "elpl" buffer
              elpl-program nil (elpl-cli-arguments))
       (elpl-mode))))
+
+(defun elpl-electric-backquote (arg)
+  "Insert a backquote."
+  (interactive "*P")
+  (let* ((ps (syntax-ppss))
+         (in-string-p (nth 3 ps))
+         (in-comment-p (nth 4 ps)))
+    (when (bound-and-true-p smartparens-mode)
+      (setq-local sp-pair-list (delq (assoc "`" sp-pair-list) sp-pair-list)))
+    (insert "`")
+    (when (or in-string-p in-comment-p)
+      (save-excursion
+        (insert "'")))))
 
 (define-derived-mode elpl-mode comint-mode "ELPL"
   "Major mode for interactively evaluating Emacs Lisp expressions.
