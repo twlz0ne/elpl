@@ -4,7 +4,7 @@
 
 ;; Author: Gong Qijian <gongqijian@gmail.com>
 ;; Created: 2019/05/28
-;; Version: 0.1.2
+;; Version: 0.1.3
 ;; Package-Requires: ((emacs "24.4"))
 ;; URL: https://github.com/twlz0ne/elpl
 ;; Keywords: lisp, tool
@@ -28,12 +28,6 @@
 ;; without contaminating current Emacs.
 ;;
 ;; See README.md for more information.
-
-;;; Change Log:
-
-;;  0.1.2  2020/08/21  Add support for completion-at-point.
-;;  0.1.1  2019/12/29  Add support for edit-indirect.
-;;  0.1.0  2019/05/28  Initial version.
 
 ;;; Code:
 
@@ -95,6 +89,13 @@
     (define-key map (kbd "TAB") 'completion-at-point)
     map)
   "Keymap for ELPL mode.")
+
+(defvar elpl-mode-syntax-table
+  (let ((st (make-syntax-table comint-mode-syntax-table)))
+    (modify-syntax-entry ?\; "<   " st)
+    (modify-syntax-entry ?\n ">   " st)
+    st)
+  "Syntax table for elpl mode.")
 
 (defvar elpl-prompt-regexp "^\\(?:\\[[^@]+@[^@]+\\]\\)"
   "Prompt for `elpl'.")
