@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    continue-on-error: ${{matrix.allow_failures}}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        emacs_version:
+          - 24.4
+          - 24.5
+          - 25.1
+          - 25.2
+          - 25.3
+          - 26.1
+          - 26.2
+          - 26.3
+          - 27.1
+
+        allow_failures: [false]
+
+        include:
+          - emacs_version: snapshot
+            allow_failures: true
+
+    steps:
+    - name: Set up Emacs
+      uses: purcell/setup-emacs@master
+      with:
+        version: ${{matrix.emacs_version}}
+
+    - name: Check out the source code
+      uses: actions/checkout@v2
+
+    - name: Run tests
+      run: make

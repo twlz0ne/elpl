@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/twlz0ne/elpl.svg?branch=master)](https://travis-ci.com/twlz0ne/elpl)
+[![CI](https://github.com/twlz0ne/elpl/workflows/CI/badge.svg)](https://github.com/twlz0ne/elpl/actions?query=workflow%3ACI)
 [![MELPA](https://melpa.org/packages/elpl-badge.svg)](https://melpa.org/#/elpl)
 
 ## ELPL
