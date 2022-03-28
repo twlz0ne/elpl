@@ -4,7 +4,7 @@
 
 ;; Author: Gong Qijian <gongqijian@gmail.com>
 ;; Created: 2019/05/28
-;; Version: 0.1.5
+;; Version: 0.1.6
 ;; Package-Requires: ((emacs "24.4"))
 ;; URL: https://github.com/twlz0ne/elpl
 ;; Keywords: lisp, tool
@@ -88,6 +88,7 @@
     (define-key map (kbd "RET") 'elpl-return)
     (define-key map (kbd "TAB") 'completion-at-point)
     (define-key map (kbd "`")   'elpl-electric-backquote)
+    (define-key map (kbd "'")   'elpl-insert-single-quote)
     map)
   "Keymap for ELPL mode.")
 
@@ -257,6 +258,12 @@ Optional prefix ARG means how many backquotes to insert, default is 1."
     (when (or in-string-p in-comment-p)
       (save-excursion
         (insert "'")))))
+
+(defun elpl-insert-single-quote (&optional arg)
+  "Insert single quote.
+Optional prefix ARG means how many single quotes to insert, default is 1."
+  (interactive "*P")
+  (insert (make-string (or arg 1) ?')))
 
 (define-derived-mode elpl-mode comint-mode "ELPL"
   "Major mode for interactively evaluating Emacs Lisp expressions.
