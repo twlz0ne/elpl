@@ -4,7 +4,7 @@
 
 ;; Author: Gong Qijian <gongqijian@gmail.com>
 ;; Created: 2019/05/28
-;; Version: 0.1.4
+;; Version: 0.1.5
 ;; Package-Requires: ((emacs "24.4"))
 ;; URL: https://github.com/twlz0ne/elpl
 ;; Keywords: lisp, tool
@@ -244,15 +244,16 @@ Return the output."
              elpl-program nil (elpl-cli-arguments))
       (elpl-mode))))
 
-(defun elpl-electric-backquote (arg)
-  "Insert a backquote."
-  (interactive "*P")
+(defun elpl-electric-backquote (&optional arg)
+  "Insert backquote.
+Optional prefix ARG means how many backquotes to insert, default is 1."
+  (interactive "P")
   (let* ((ps (syntax-ppss))
          (in-string-p (nth 3 ps))
          (in-comment-p (nth 4 ps)))
     (when (bound-and-true-p smartparens-mode)
       (setq-local sp-pair-list (delq (assoc "`" sp-pair-list) sp-pair-list)))
-    (insert "`")
+    (insert (make-string (or arg 1) ?`))
     (when (or in-string-p in-comment-p)
       (save-excursion
         (insert "'")))))
